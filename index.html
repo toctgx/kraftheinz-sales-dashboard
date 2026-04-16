@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>KHK Sales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #c8102e;
+      --dark: #0d0d0d;
+      --bg: #f4f4f6;
+      --card: #ffffff;
+      --border: #e8e8ec;
+      --text: #1a1a1a;
+      --sub: #8a8a9a;
+      --up: #d92d32;
+      --down: #1a6fd4;
+      --tab-h: 52px;
+      --header-h: 56px;
+      --filter-h: 48px;
+    }
+    html, body { height: 100%; overflow: hidden; font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); }
+    .app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; position: relative; }
+
+    /* ── 헤더 ── */
+    .app-header {
+      flex: 0 0 auto;
+      height: var(--header-h);
+      background: var(--dark);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+    .header-logo { display: flex; align-items: center; gap: 6px; }
+    .header-logo img { height: 26px; object-fit: contain; filter: brightness(10); }
+    .header-title { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .cy-badge {
+      background: var(--red);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── 검색 + 필터 ── */
+    .search-bar {
+      flex: 0 0 auto;
+      background: var(--dark);
+      padding: 0 12px 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .search-input-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: #2a2a2a;
+      border-radius: 10px;
+      padding: 0 10px;
+      gap: 6px;
+      height: 36px;
+    }
+    .search-input-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .search-input-wrap input::placeholder { color: #666; }
+    .search-icon { color: #666; font-size: 14px; }
+
+    /* ── 필터칩 ── */
+    .filter-row {
+      flex: 0 0 auto;
+      height: var(--filter-h);
+      background: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: 0 0 auto;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid #333;
+      color: #aaa;
+      background: transparent;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .chip.active { background: var(--red); border-color: var(--red); color: #fff; }
+
+    /* ── 탭바 ── */
+    .tab-bar {
+      flex: 0 0 auto;
+      height: var(--tab-h);
+      background: #fff;
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--sub);
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: inherit;
+      position: relative;
+    }
+    .tab-btn.active { color: var(--red); }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--red);
+      border-radius: 2px 2px 0 0;
+    }
+    .tab-icon { font-size: 16px; }
+
+    /* ── 스크롤 영역 ── */
+    .scroll-area {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px;
+    }
+
+    /* ── 스크린 ── */
+    .screen { display: none; flex-direction: column; height: 100%; }
+    .screen.active { display: flex; }
+
+    /* ── 로딩 ── */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 0;
+      color: var(--sub);
+      font-size: 13px;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 요약 카드 ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .summary-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+    }
+    .summary-card .s-label { font-size: 11px; color: var(--sub); font-weight: 600; margin-bottom: 6px; }
+    .summary-card .s-value { font-size: 20px; font-weight: 800; color: var(--text); }
+    .summary-card .s-sub { font-size: 11px; color: var(--sub); margin-top: 2px; }
+    .summary-card .s-change { font-size: 12px; font-weight: 700; margin-top: 4px; }
+    .summary-card .s-change.up { color: var(--up); }
+    .summary-card .s-change.down { color: var(--down); }
+
+    /* ── 제품 리스트 ── */
+    .product-list { display: flex; flex-direction: column; gap: 1px; }
+    .product-item {
+      background: var(--card);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-radius: 0;
+    }
+    .product-item:first-child { border-radius: 12px 12px 0 0; }
+    .product-item:last-child { border-radius: 0 0 12px 12px; }
+    .product-item:only-child { border-radius: 12px; }
+    .product-item:active { background: #f8f8fa; }
+    .product-rank {
+      width: 24px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sub);
+    }
+    .product-rank.top1 { color: #f5a623; }
+    .product-rank.top2 { color: #9b9b9b; }
+    .product-rank.top3 { color: #c8602e; }
+    .product-info { flex: 1; min-width: 0; }
+    .product-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .product-meta { font-size: 11px; color: var(--sub); margin-top: 2px; }
+    .product-nums { text-align: right; flex: 0 0 auto; }
+    .product-val { font-size: 14px; font-weight: 800; color: var(--text); }
+    .product-change { font-size: 11px; font-weight: 700; margin-top: 2px; }
+    .product-change.up { color: var(--up); }
+    .product-change.down { color: var(--down); }
+    .product-change.flat { color: var(--sub); }
+
+    /* ── 섹션 헤더 ── */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0 6px;
+      padding: 0 2px;
+    }
+    .section-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .section-count { font-size: 12px; color: var(--sub); }
+
+    /* ── 카테고리 카드 ── */
+    .cat-grid { display: flex; flex-direction: column; gap: 8px; }
+    .cat-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .cat-card:active { background: #f8f8fa; }
+    .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .cat-name { font-size: 13px; font-weight: 700; }
+    .cat-total { font-size: 14px; font-weight: 800; }
+    .cat-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .cat-bar { height: 100%; background: var(--red); border-radius: 2px; transition: width 0.5s ease; }
+    .cat-meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--sub); }
+
+    /* ── 채널 카드 ── */
+    .channel-cards { display: flex; flex-direction: column; gap: 8px; }
+    .channel-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+    .channel-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .badge-WS { background: #fff3e0; color: #e65100; }
+    .badge-Retail { background: #e3f2fd; color: #1565c0; }
+    .badge-Key { background: #f3e5f5; color: #6a1b9a; }
+    .channel-nums { display: flex; gap: 16px; margin-top: 8px; }
+    .channel-num-item { flex: 1; }
+    .channel-num-label { font-size: 10px; color: var(--sub); margin-bottom: 2px; }
+    .channel-num-val { font-size: 16px; font-weight: 800; }
+
+    /* ── 상세 화면 ── */
+    .detail-header {
+      flex: 0 0 auto;
+      background: var(--dark);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      font-family: inherit;
+    }
+    .detail-title { color: #fff; font-size: 14px; font-weight: 700; flex: 1; line-height: 1.3; }
+    .detail-code { color: #666; font-size: 11px; }
+    .chart-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+    .chart-title { font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 12px; }
+    .chart-wrap { position: relative; height: 180px; }
+    .year-tab-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .year-tab-row::-webkit-scrollbar { display: none; }
+    .year-chip {
+      flex: 0 0 auto;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      color: var(--sub);
+      background: var(--card);
+      font-family: inherit;
+    }
+    .year-chip.active { background: var(--red); border-color: var(--red); color: #fff; }
+    .monthly-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .monthly-cell {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .monthly-cell .m-label { font-size: 10px; color: var(--sub); font-weight: 600; }
+    .monthly-cell .m-val { font-size: 12px; font-weight: 800; margin-top: 2px; }
+    .monthly-cell.has-data { background: #fff0f0; }
+    .monthly-cell.has-data .m-val { color: var(--red); }
+
+    /* ── 빈 상태 ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 48px 0;
+      color: var(--sub);
+      font-size: 13px;
+    }
+    .empty-icon { font-size: 36px; }
+
+    /* ── 스크롤바 ── */
+    .scroll-area::-webkit-scrollbar { width: 3px; }
+    .scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── 헤더 ── -->
+  <header class="app-header">
+    <div class="header-logo">
+      <span style="color:#fff;font-size:18px;font-weight:900;letter-spacing:-1px;">HEINZ</span>
+      <span style="color:#c8102e;font-size:18px;font-weight:900;">KR</span>
+    </div>
+    <div class="header-right">
+      <span class="cy-badge" id="currentCyBadge">CY26</span>
+      <span style="color:#fff;font-size:18px;">🇰🇷</span>
+    </div>
+  </header>
+
+  <!-- ── 검색바 ── -->
+  <div class="search-bar">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="제품명 또는 BPCS 코드 검색" />
+    </div>
+  </div>
+
+  <!-- ── 필터칩 ── -->
+  <div class="filter-row" id="filterRow">
+    <button class="chip active" data-cy="ALL">전체</button>
+    <button class="chip" data-cy="CY26">CY26</button>
+    <button class="chip" data-cy="CY25">CY25</button>
+    <button class="chip" data-cy="CY24">CY24</button>
+    <button class="chip" data-cy="CY23">CY23</button>
+    <button class="chip" data-channel="ALL" style="margin-left:8px;border-color:#555;">전체채널</button>
+    <button class="chip" data-channel="WS">WS</button>
+    <button class="chip" data-channel="Retail">Retail</button>
+    <button class="chip" data-channel="Key">Key</button>
+  </div>
+
+  <!-- ── 탭바 ── -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">
+      <span class="tab-icon">📊</span>전체현황
+    </button>
+    <button class="tab-btn" data-tab="products" onclick="showTab('products')">
+      <span class="tab-icon">📦</span>제품별
+    </button>
+    <button class="tab-btn" data-tab="category" onclick="showTab('category')">
+      <span class="tab-icon">🏷️</span>카테고리
+    </button>
+    <button class="tab-btn" data-tab="channel" onclick="showTab('channel')">
+      <span class="tab-icon">🏪</span>채널별
+    </button>
+  </div>
+
+  <!-- ── 전체현황 탭 ── -->
+  <div class="screen active" id="screen-overview">
+    <div class="scroll-area" id="overview-scroll">
+      <div class="loading" id="overview-loading">
+        <div class="spinner"></div>
+        <span>데이터 불러오는 중...</span>
+      </div>
+      <div id="overview-content" style="display:none;">
+        <div class="summary-grid" id="summaryGrid"></div>
+        <div class="section-header">
+          <span class="section-title">🔥 Top 10 제품</span>
+          <span class="section-count" id="top10Count"></span>
+        </div>
+        <div class="product-list" id="top10List"></div>
+        <div style="height:16px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 제품별 탭 ── -->
+  <div class="screen" id="screen-products">
+    <div class="scroll-area">
+      <div class="section-header">
+        <span class="section-title" id="productListTitle">전체 제품</span>
+        <span class="section-count" id="productListCount"></span>
+      </div>
+      <div class="product-list" id="productList"></div>
+      <div style="height:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ── 카테고리 탭 ── -->
+  <div class="screen" id="screen-category">
+    <div class="scroll-area">
+      <div class="section-header">
+        <span class="section-title">카테고리별 판매량</span>
+      </div>
+      <div class="cat-grid" id="catGrid"></div>
+      <div style="height:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ── 채널별 탭 ── -->
+  <div class="screen" id="screen-channel">
+    <div class="scroll-area">
+      <div class="section-header">
+        <span class="section-title">채널별 현황</span>
+      </div>
+      <div class="channel-cards" id="channelCards"></div>
+      <div style="height:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ── 상세 화면 ── -->
+  <div class="screen" id="screen-detail">
+    <div class="detail-header">
+      <button class="back-btn" onclick="closeDetail()">←</button>
+      <div>
+        <div class="detail-title" id="detailTitle"></div>
+        <div class="detail-code" id="detailCode"></div>
+      </div>
+    </div>
+    <div class="scroll-area">
+      <div style="padding: 4px 0;">
+        <div class="year-tab-row" id="detailYearTabs"></div>
+        <div class="chart-card">
+          <div class="chart-title">📈 월별 판매 추이</div>
+          <div class="chart-wrap"><canvas id="detailChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📅 월별 상세</div>
+          <div class="monthly-grid" id="monthlyGrid"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📊 연도별 연간 합계</div>
+          <div class="chart-wrap"><canvas id="yearChart"></canvas></div>
+        </div>
+      </div>
+      <div style="height:16px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// 데이터 로드
+// ─────────────────────────────────────────
+const SHEET_ID = '1kZV6yTQbPZVHKg6ifcHlgT2c85FItSDiQ1g1zq1Wpeg';
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_KO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+let allData = [];
+let filteredData = [];
+let currentCY = 'ALL';
+let currentChannel = 'ALL';
+let searchQ = '';
+let detailChartInst = null;
+let yearChartInst = null;
+
+async function loadData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+  const res = await fetch(url);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  const header = rows[0];
+  allData = rows.slice(1).filter(r => r[0] && r[1] && r[2]).map(r => ({
+    code: r[0]?.trim(),
+    name: r[1]?.trim(),
+    cy: r[2]?.trim(),
+    jan: parseNum(r[3]), feb: parseNum(r[4]), mar: parseNum(r[5]),
+    apr: parseNum(r[6]), may: parseNum(r[7]), jun: parseNum(r[8]),
+    jul: parseNum(r[9]), aug: parseNum(r[10]), sep: parseNum(r[11]),
+    oct: parseNum(r[12]), nov: parseNum(r[13]), dec: parseNum(r[14]),
+    channel: r[15]?.trim() || '',
+    cat: r[17]?.trim() || 'Other',
+  }));
+  document.getElementById('overview-loading').style.display = 'none';
+  document.getElementById('overview-content').style.display = 'block';
+  applyFilters();
+}
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { row.push(cur); cur = ''; }
+      else cur += c;
+    }
+    row.push(cur);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function parseNum(v) {
+  if (!v || v === '-' || v === '') return 0;
+  return parseInt(v.replace(/,/g, '')) || 0;
+}
+
+function getTotal(row) {
+  return row.jan + row.feb + row.mar + row.apr + row.may + row.jun +
+         row.jul + row.aug + row.sep + row.oct + row.nov + row.dec;
+}
+
+function getMonths(row) {
+  return [row.jan,row.feb,row.mar,row.apr,row.may,row.jun,row.jul,row.aug,row.sep,row.oct,row.nov,row.dec];
+}
+
+function fmt(n) {
+  if (n >= 10000) return (n/10000).toFixed(1) + '만';
+  return n.toLocaleString();
+}
+
+// ─────────────────────────────────────────
+// 필터
+// ─────────────────────────────────────────
+function applyFilters() {
+  filteredData = allData.filter(r => {
+    if (currentCY !== 'ALL' && r.cy !== currentCY) return false;
+    if (currentChannel !== 'ALL' && r.channel !== currentChannel) return false;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      if (!r.name.toLowerCase().includes(q) && !r.code.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  renderAll();
+}
+
+// ─────────────────────────────────────────
+// 렌더
+// ─────────────────────────────────────────
+function renderAll() {
+  renderOverview();
+  renderProducts();
+  renderCategory();
+  renderChannel();
+}
+
+function renderOverview() {
+  // 요약 카드
+  const totalSales = filteredData.reduce((s, r) => s + getTotal(r), 0);
+  const totalProducts = new Set(filteredData.map(r => r.code)).size;
+  const totalCats = new Set(filteredData.map(r => r.cat)).size;
+
+  // 전년 대비 (CY26 vs CY25)
+  const cy26 = allData.filter(r => r.cy === 'CY26' && (currentChannel === 'ALL' || r.channel === currentChannel));
+  const cy25 = allData.filter(r => r.cy === 'CY25' && (currentChannel === 'ALL' || r.channel === currentChannel));
+  const sum26 = cy26.reduce((s,r) => s+getTotal(r), 0);
+  const sum25 = cy25.reduce((s,r) => s+getTotal(r), 0);
+  const yoy = sum25 > 0 ? ((sum26-sum25)/sum25*100).toFixed(1) : null;
+
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = `
+    <div class="summary-card">
+      <div class="s-label">총 판매량 (필터 적용)</div>
+      <div class="s-value">${fmt(totalSales)}</div>
+      <div class="s-sub">단위: 개</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">제품 수</div>
+      <div class="s-value">${totalProducts}</div>
+      <div class="s-sub">${totalCats}개 카테고리</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">CY26 판매량</div>
+      <div class="s-value">${fmt(sum26)}</div>
+      ${yoy !== null ? `<div class="s-change ${parseFloat(yoy)>=0?'up':'down'}">${parseFloat(yoy)>=0?'▲':'▼'} ${Math.abs(yoy)}% vs CY25</div>` : ''}
+    </div>
+    <div class="summary-card">
+      <div class="s-label">CY25 판매량</div>
+      <div class="s-value">${fmt(sum25)}</div>
+      <div class="s-sub">전년도 기준</div>
+    </div>
+  `;
+
+  // Top 10
+  const byCode = {};
+  filteredData.forEach(r => {
+    if (!byCode[r.code]) byCode[r.code] = { code: r.code, name: r.name, cat: r.cat, total: 0 };
+    byCode[r.code].total += getTotal(r);
+  });
+  const top10 = Object.values(byCode).sort((a,b) => b.total - a.total).slice(0,10);
+  document.getElementById('top10Count').textContent = `TOP ${top10.length}`;
+
+  const list = document.getElementById('top10List');
+  list.innerHTML = top10.map((p, i) => {
+    const rankClass = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    return `<div class="product-item" onclick="openDetail('${p.code}')">
+      <div class="product-rank ${rankClass}">${i+1}</div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-meta">${p.code} · ${p.cat}</div>
+      </div>
+      <div class="product-nums">
+        <div class="product-val">${fmt(p.total)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderProducts() {
+  const q = searchQ.toLowerCase();
+  const byCode = {};
+  filteredData.forEach(r => {
+    if (!byCode[r.code]) byCode[r.code] = { code: r.code, name: r.name, cat: r.cat, channel: r.channel, byCY: {} };
+    byCode[r.code].byCY[r.cy] = (byCode[r.code].byCY[r.cy] || 0) + getTotal(r);
+  });
+  const products = Object.values(byCode).sort((a,b) => {
+    const ta = Object.values(a.byCY).reduce((s,v)=>s+v,0);
+    const tb = Object.values(b.byCY).reduce((s,v)=>s+v,0);
+    return tb - ta;
+  });
+
+  document.getElementById('productListTitle').textContent = q ? `"${searchQ}" 검색결과` : '전체 제품';
+  document.getElementById('productListCount').textContent = `${products.length}개`;
+
+  const list = document.getElementById('productList');
+  if (!products.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div>검색 결과가 없습니다</div></div>`;
+    return;
+  }
+
+  list.innerHTML = products.map((p, i) => {
+    const total = Object.values(p.byCY).reduce((s,v)=>s+v,0);
+    const cy26v = p.byCY['CY26'] || 0;
+    const cy25v = p.byCY['CY25'] || 0;
+    let changeHtml = '';
+    if (cy25v > 0 && cy26v > 0) {
+      const pct = ((cy26v-cy25v)/cy25v*100).toFixed(0);
+      const cls = parseFloat(pct)>=0?'up':'down';
+      changeHtml = `<div class="product-change ${cls}">${parseFloat(pct)>=0?'▲':'▼'}${Math.abs(pct)}%</div>`;
+    }
+    return `<div class="product-item" onclick="openDetail('${p.code}')">
+      <div class="product-rank">${i+1}</div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-meta">${p.code} · ${p.cat}</div>
+      </div>
+      <div class="product-nums">
+        <div class="product-val">${fmt(total)}</div>
+        ${changeHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCategory() {
+  const byCat = {};
+  filteredData.forEach(r => {
+    const cat = r.cat || 'Other';
+    byCat[cat] = (byCat[cat] || 0) + getTotal(r);
+  });
+  const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const maxVal = cats[0]?.[1] || 1;
+
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = cats.map(([cat, total]) => {
+    const pct = (total/maxVal*100).toFixed(0);
+    const prods = new Set(filteredData.filter(r=>(r.cat||'Other')===cat).map(r=>r.code)).size;
+    return `<div class="cat-card">
+      <div class="cat-header">
+        <span class="cat-name">${cat}</span>
+        <span class="cat-total">${fmt(total)}</span>
+      </div>
+      <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%"></div></div>
+      <div class="cat-meta">
+        <span>${prods}개 제품</span>
+        <span>${pct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderChannel() {
+  const channels = ['WS', 'Retail', 'Key'];
+  const cards = document.getElementById('channelCards');
+  cards.innerHTML = channels.map(ch => {
+    const rows = filteredData.filter(r => r.channel === ch);
+    const total = rows.reduce((s,r)=>s+getTotal(r),0);
+    const prods = new Set(rows.map(r=>r.code)).size;
+    const cy26 = rows.filter(r=>r.cy==='CY26').reduce((s,r)=>s+getTotal(r),0);
+    const cy25 = rows.filter(r=>r.cy==='CY25').reduce((s,r)=>s+getTotal(r),0);
+    const yoy = cy25>0 ? ((cy26-cy25)/cy25*100).toFixed(1) : null;
+    return `<div class="channel-card">
+      <span class="channel-badge badge-${ch}">${ch}</span>
+      <div style="font-size:22px;font-weight:900;">${fmt(total)}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:2px;">${prods}개 제품</div>
+      <div class="channel-nums">
+        <div class="channel-num-item">
+          <div class="channel-num-label">CY26</div>
+          <div class="channel-num-val" style="font-size:14px;">${fmt(cy26)}</div>
+        </div>
+        <div class="channel-num-item">
+          <div class="channel-num-label">CY25</div>
+          <div class="channel-num-val" style="font-size:14px;">${fmt(cy25)}</div>
+        </div>
+        ${yoy !== null ? `<div class="channel-num-item">
+          <div class="channel-num-label">YoY</div>
+          <div class="channel-num-val" style="font-size:14px;color:${parseFloat(yoy)>=0?'var(--up)':'var(--down)'};">${parseFloat(yoy)>=0?'▲':'▼'}${Math.abs(yoy)}%</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+// 상세 화면
+// ─────────────────────────────────────────
+let detailCode = null;
+let detailCY = 'CY26';
+
+function openDetail(code) {
+  detailCode = code;
+  const rows = allData.filter(r => r.code === code);
+  if (!rows.length) return;
+  const name = rows[0].name;
+  document.getElementById('detailTitle').textContent = name;
+  document.getElementById('detailCode').textContent = code;
+
+  // 연도 탭
+  const cys = [...new Set(rows.map(r=>r.cy))].sort().reverse();
+  detailCY = cys[0] || 'CY26';
+
+  const tabsEl = document.getElementById('detailYearTabs');
+  tabsEl.innerHTML = cys.map(cy =>
+    `<button class="year-chip ${cy===detailCY?'active':''}" onclick="switchDetailCY('${cy}')">${cy}</button>`
+  ).join('');
+
+  // 탭바 숨기기
+  document.querySelector('.tab-bar').style.display = 'none';
+  document.querySelector('.search-bar').style.display = 'none';
+  document.querySelector('.filter-row').style.display = 'none';
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+
+  renderDetail();
+  renderYearChart(code, rows);
+}
+
+function switchDetailCY(cy) {
+  detailCY = cy;
+  document.querySelectorAll('.year-chip').forEach(c => {
+    c.classList.toggle('active', c.textContent === cy);
+  });
+  renderDetail();
+}
+
+function renderDetail() {
+  const rows = allData.filter(r => r.code === detailCode && r.cy === detailCY);
+  // 같은 제품+연도가 채널별로 여러 행일 수 있음 → 합산
+  const monthVals = MONTHS.map((_, i) => {
+    const key = MONTHS[i].toLowerCase();
+    return rows.reduce((s,r) => s + (r[key]||0), 0);
+  });
+
+  // 월별 그리드
+  const grid = document.getElementById('monthlyGrid');
+  grid.innerHTML = MONTHS_KO.map((m, i) => {
+    const v = monthVals[i];
+    return `<div class="monthly-cell ${v>0?'has-data':''}">
+      <div class="m-label">${m}</div>
+      <div class="m-val">${v>0?v.toLocaleString():'-'}</div>
+    </div>`;
+  }).join('');
+
+  // 라인 차트
+  if (detailChartInst) detailChartInst.destroy();
+  const ctx = document.getElementById('detailChart').getContext('2d');
+  detailChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MONTHS_KO,
+      datasets: [{
+        data: monthVals,
+        borderColor: '#c8102e',
+        backgroundColor: 'rgba(200,16,46,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#c8102e',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 }, callback: v => v>=10000?(v/10000).toFixed(1)+'만':v } }
+      }
+    }
+  });
+}
+
+function renderYearChart(code, rows) {
+  const cys = ['CY23','CY24','CY25','CY26'];
+  const yearTotals = cys.map(cy => {
+    const cyRows = rows.filter(r=>r.cy===cy);
+    return cyRows.reduce((s,r)=>s+getTotal(r),0);
+  });
+
+  if (yearChartInst) yearChartInst.destroy();
+  const ctx = document.getElementById('yearChart').getContext('2d');
+  yearChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: cys,
+      datasets: [{
+        data: yearTotals,
+        backgroundColor: cys.map(cy => cy==='CY26'?'#c8102e':'#e8e8ec'),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 }, callback: v => v>=10000?(v/10000).toFixed(1)+'만':v } }
+      }
+    }
+  });
+}
+
+function closeDetail() {
+  document.querySelector('.tab-bar').style.display = 'flex';
+  document.querySelector('.search-bar').style.display = 'flex';
+  document.querySelector('.filter-row').style.display = 'flex';
+  document.getElementById('screen-detail').classList.remove('active');
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab || 'overview';
+  document.getElementById(`screen-${activeTab}`).classList.add('active');
+}
+
+// ─────────────────────────────────────────
+// 탭 전환
+// ─────────────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${tab}`).classList.add('active');
+}
+
+// ─────────────────────────────────────────
+// 필터 이벤트
+// ─────────────────────────────────────────
+document.getElementById('filterRow').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  if (btn.dataset.cy !== undefined) {
+    document.querySelectorAll('[data-cy]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCY = btn.dataset.cy;
+    document.getElementById('currentCyBadge').textContent = currentCY === 'ALL' ? 'ALL' : currentCY;
+  }
+  if (btn.dataset.channel !== undefined) {
+    document.querySelectorAll('[data-channel]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentChannel = btn.dataset.channel;
+  }
+  applyFilters();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQ = e.target.value.trim();
+  applyFilters();
+  if (searchQ) showTab('products');
+});
+
+// ─────────────────────────────────────────
+// 초기화
+// ─────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
