@@ -380,7 +380,7 @@
         <span>데이터 불러오는 중...</span>
       </div>
       <div id="overview-content" style="display:none;">
-        <div class="summary-grid" id="summaryGrid"></div>
+
         <div class="section-header">
           <span class="section-title">🔥 Top 10 제품</span>
           <span class="section-count" id="top10Count"></span>
@@ -643,27 +643,7 @@ function renderOverview() {
   const sum25 = cy25.reduce((s,r) => s+getTotal(r), 0);
   const yoy = sum25 > 0 ? ((sum26-sum25)/sum25*100).toFixed(1) : null;
 
-  document.getElementById('summaryGrid').innerHTML = `
-    <div class="summary-card">
-      <div class="s-label">총 판매량</div>
-      <div class="s-value">${fmtShort(totalSales)}</div>
-      <div class="s-sub">BOX 단위</div>
-    </div>
-    <div class="summary-card">
-      <div class="s-label">제품 수</div>
-      <div class="s-value">${totalProducts}</div>
-      <div class="s-sub">${totalCats}개 카테고리</div>
-    </div>
-    <div class="summary-card">
-      <div class="s-label">CY26 판매량</div>
-      <div class="s-value">${fmtShort(sum26)}</div>
-      ${yoy !== null ? `<div class="s-change ${parseFloat(yoy)>=0?'up':'down'}">${parseFloat(yoy)>=0?'▲':'▼'}${Math.abs(yoy)}% vs CY25</div>` : ''}
-    </div>
-    <div class="summary-card">
-      <div class="s-label">CY25 판매량</div>
-      <div class="s-value">${fmtShort(sum25)}</div>
-      <div class="s-sub">전년도 기준</div>
-    </div>`;
+
 
   const byCode = {};
   filteredData.forEach(r => {
